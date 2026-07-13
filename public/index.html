@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Advanced Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="margin:0;font-family:Arial;">
+
+<div style="display:flex;height:100vh;">
+
+  <!-- Sidebar -->
+  <div style="width:25%;background:#2c3e50;color:white;padding:10px;">
+    <h3>Users</h3>
+    <ul id="userList" style="list-style:none;padding:0;"></ul>
+  </div>
+
+  <!-- Chat Section -->
+  <div style="width:75%;display:flex;flex-direction:column;">
+
+    <div id="chatBox" style="flex:1;padding:10px;background:#ecf0f1;overflow-y:scroll;"></div>
+
+    <div style="display:flex;">
+      <input id="message" placeholder="Type message..." style="flex:1;padding:10px;">
+      <button onclick="send()" style="padding:10px;background:green;color:white;border:none;">Send</button>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+const socket = io();
+let username = prompt("Enter username");
+let selectedUserId = null;
+
+socket.emit("join", username);
+
+// Show users
+socket.on("userList", (users) => {
+    let list = document.getElementById("userList");
+    list.innerHTML = "";
+
+    for (let id in users) {
+        let li = document.createElement("li");
+        li.innerText = users[id];
+        li.style.padding = "8px";
+        li.style.cursor = "pointer";
+
+        li.onclick = () => {
+            selectedUserId = id;
+            alert("Private chat with " + users[id]);
+        };
+
+        list.appendChild(li);
+    }
+});
+
+// Public message
+socket.on("message", (data) => {
+    addMessage(data.user + ": " + data.text);
+});
+
+// Private message
+socket.on("privateMessage", (data) => {
+    addMessage("(Private) " + data.from + ": " + data.text);
+});
+
+function send() {
+    let msg = document.getElementById("message").value;
+
+    if (selectedUserId) {
+        socket.emit("privateMessage", {
+            toId: selectedUserId,
+            msg: msg
+        });
+    } else {
+        socket.emit("sendMessage", msg);
+    }
+
+    document.getElementById("message").value = "";
+}
+
+function addMessage(msg) {
+    let div = document.createElement("div");
+    div.innerText = msg;
+    div.style.marginBottom = "5px";
+    document.getElementById("chatBox").appendChild(div);
+}
+</script>
+
+</body>
+</html>
